@@ -1,0 +1,51 @@
+<project name="twc_perc_spring_mvc" default="jar" basedir=".">
+	<property file="build.properties"/>
+	
+	<property name="rx_jars_dir" location="../twc_perc_extensions/lib"/>
+	<property name="build_dir" location="bin"/>
+	<property name="jar_dir" location="jar"/>
+	<property name="src_dir" location="src"/>
+	<property name="jar_name" value="twc-springmvc-1.0.0.jar"/>
+	<property name="jar_dir_and_name" value="${jar_dir}/${jar_name}"/>
+	
+	<path id="classpath">
+		<fileset dir="${rx_jars_dir}">
+			<include name="*.jar"/>
+		</fileset>
+	</path>
+	
+	<target name="init">
+		<mkdir dir="${build_dir}"/>
+		<mkdir dir="${jar_dir}"/>
+	</target>
+	
+	<target name="clean" depends="init">
+		<delete dir="${build_dir}"/>
+		<delete dir="${jar_dir}"/>
+	</target>
+	
+	<target name="build" depends="init">
+		<javac 	srcdir="${src_dir}" 
+				destdir="${build_dir}"
+				fork="yes"
+				verbose="yes"
+				executable="${jdk_location}">
+			<classpath refid="classpath"/>
+		</javac>		
+	</target>
+	
+	<target name="jar" depends="build">
+		<jar destfile="${jar_dir_and_name}">
+			<fileset dir="${build_dir}">
+				<include name="**/*.class"/>
+				<exclude name="**/test/*"/>
+			</fileset>
+		</jar>		
+	</target>
+	
+	<target name="clean_build" depends="clean, build">
+	</target>
+	
+	<target name="clean_build_jar" depends="clean, build, jar">
+	</target>
+</project>
