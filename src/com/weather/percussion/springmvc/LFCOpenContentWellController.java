@@ -11,6 +11,7 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.multiaction.MultiActionController;
 
 import com.weather.percussion.data.WxNodeResource;
+import com.weather.percussion.db.LFCOpenContentWellDAO;
 
 public class LFCOpenContentWellController extends MultiActionController {
     
@@ -54,7 +55,9 @@ public class LFCOpenContentWellController extends MultiActionController {
             model.put("json", "{\"error\":\"Resource must be unique\"}");
         }
         else {
-            //TODO: Create document in document store
+            LFCOpenContentWellDAO dao = new LFCOpenContentWellDAO();
+            dao.createResource(wxNodeResource);
+            //TODO: Need to catch exception and return msg to ui
             model.put("json", "{\"msg\":\"Resource successfully created in document store\"}");            
             
         }
@@ -67,8 +70,10 @@ public class LFCOpenContentWellController extends MultiActionController {
         log.debug("LFCOpenContentWellController.update()");
         WxNodeResource wxNodeResource = loadResourceFromRequest(request);
     
-        //TODO: Update document in document store
+        LFCOpenContentWellDAO dao = new LFCOpenContentWellDAO();
+        dao.updateResource(wxNodeResource);
         HashMap<String, String> model = new HashMap<String, String>();
+        //TODO: wrap dao call in try/catch and return appropriate results, not success every time
         model.put("json", "{\"msg\":\"Resource successfully updated in document store\"}");        
         return new ModelAndView("getautocompletesearch", "model", model);
     
@@ -77,11 +82,17 @@ public class LFCOpenContentWellController extends MultiActionController {
     public ModelAndView get(HttpServletRequest request, HttpServletResponse response)
         throws Exception {
         log.debug("LFCOpenContentWellController.get()");
-        log.debug("Resource: " + request.getParameter(RESOURCE_REQUEST_PARAM));        
-        
-        //TODO: Call DB to fetch document
-        HashMap<String, String> model = new HashMap<String, String>();        
-        model.put("json", "{\"title\":\"This is a test title\",\"providercode\":\"This is a test code\",\"property\":\"Desktop\"}");        
+        log.debug("Resource: " + request.getParameter(RESOURCE_REQUEST_PARAM)); 
+        WxNodeResource wxNodeResource = loadResourceFromRequest(request);
+        LFCOpenContentWellDAO dao = new LFCOpenContentWellDAO();
+        WxNodeResource fetchedResource = dao.getResourceByKey(wxNodeResource.getKey());
+        HashMap<String, String> model = new HashMap<String, String>();
+        if (fetchedResource != null) {
+            model.put("json", fetchedResource.toJSON());   
+        }
+        else {
+            model.put("json", "");
+        }
         return new ModelAndView("getautocompletesearch", "model", model);
 
     }     
@@ -90,9 +101,11 @@ public class LFCOpenContentWellController extends MultiActionController {
         throws Exception {
         log.debug("LFCOpenContentWellController.delete()");
         log.debug("Resource: " + request.getParameter(RESOURCE_REQUEST_PARAM));        
-
-        //TODO: Delete document in document store
+        WxNodeResource wxNodeResource = loadResourceFromRequest(request);
+        LFCOpenContentWellDAO dao = new LFCOpenContentWellDAO();
+        dao.deleteResource(wxNodeResource.getKey());
         HashMap<String, String> model = new HashMap<String, String>();
+        //TODO: Handle exceptions from dao and return appropriate msg
         model.put("json", "{\"msg\":\"Resource successfully deleted from document store\"}");        
         return new ModelAndView("getautocompletesearch", "model", model);
 
@@ -110,8 +123,8 @@ public class LFCOpenContentWellController extends MultiActionController {
         WxNodeResource wxNodeResource = new WxNodeResource();
         wxNodeResource.setResourceTitle(request.getParameter(TITLE_REQUEST_PARAM));
         log.debug(new StringBuilder("Resource Title: ").append(wxNodeResource.getResourceTitle()).toString());
-        wxNodeResource.setProperty(request.getParameter(PROPERTY_REQUEST_PARAM));
-        log.debug(new StringBuilder("Property: ").append(wxNodeResource.getProperty()).toString());
+        wxNodeResource.setPlatform(request.getParameter(PLATFORM_REQUEST_PARAM));
+        log.debug(new StringBuilder("Platform: ").append(wxNodeResource.getPlatform()).toString());
         wxNodeResource.setProviderCode(request.getParameter(PROVIDER_CODE_REQUEST_PARAM));
         log.debug(new StringBuilder("Provider Code: ").append(wxNodeResource.getProviderCode()).toString());
         wxNodeResource.setResourceId(request.getParameter(RESOURCE_REQUEST_PARAM));
@@ -120,7 +133,7 @@ public class LFCOpenContentWellController extends MultiActionController {
     }
     
     private static final String TITLE_REQUEST_PARAM = "title";
-    private static final String PROPERTY_REQUEST_PARAM = "property";
+    private static final String PLATFORM_REQUEST_PARAM = "platform";
     private static final String PROVIDER_CODE_REQUEST_PARAM = "providercode";
     private static final String RESOURCE_REQUEST_PARAM = "resource";
     private static final String AUTOCOMPLETE_TERM_PARAM = "term";
