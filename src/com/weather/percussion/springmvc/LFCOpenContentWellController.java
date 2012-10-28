@@ -7,6 +7,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.json.simple.JSONObject;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.multiaction.MultiActionController;
 
@@ -41,8 +42,8 @@ public class LFCOpenContentWellController extends MultiActionController {
         dummyData.append("{\"id\":\"texas\",\"label\":\"texas\",\"value\":\"texas\",\"title\":\"texas\"}]");
         
         HashMap<String, String> model = new HashMap<String, String>();
-        model.put("json", dummyData.toString());
-        return new ModelAndView("getautocompletesearch", "model", model);        
+        model.put(MODEL_JSON_KEY, dummyData.toString());
+        return new ModelAndView("getautocompletesearch", MODEL_KEY, model);        
     }
     
     public ModelAndView create(HttpServletRequest request, HttpServletResponse response)
@@ -51,17 +52,23 @@ public class LFCOpenContentWellController extends MultiActionController {
         WxNodeResource wxNodeResource = loadResourceFromRequest(request);
                 
         HashMap<String, String> model = new HashMap<String, String>();
-        if (!isResourceIdUnique(wxNodeResource.getResourceId())) {
-            model.put("json", "{\"error\":\"Resource must be unique\"}");
-        }
-        else {
+        JSONObject jsonObj = new JSONObject();                                    
+        try {
             LFCOpenContentWellDAO dao = new LFCOpenContentWellDAO();
-            dao.createResource(wxNodeResource);
-            //TODO: Need to catch exception and return msg to ui
-            model.put("json", "{\"msg\":\"Resource successfully created in document store\"}");            
-            
+            if (!resourceExists(dao, wxNodeResource)) {
+                dao.createResource(wxNodeResource);                
+                jsonObj.put(JSON_MSG_KEY, "Resource successfully created in document store.");  
+            }
+            else {
+                jsonObj.put(JSON_ERROR_KEY, "A resource with this Resource Id and Platform already exists.");
+            }
         }
-        return new ModelAndView("getautocompletesearch", "model", model);
+        catch(Exception e) {
+            log.error("Error creating wxnode resource", e);
+            jsonObj.put(JSON_ERROR_KEY, "There was an unknown error creating the resource, please consult the server logs for details.");
+        }                        
+        model.put(MODEL_JSON_KEY, jsonObj.toString());
+        return new ModelAndView(MODEL_AND_VIEW_NAME, MODEL_KEY, model);
         
     }
     
@@ -70,13 +77,24 @@ public class LFCOpenContentWellController extends MultiActionController {
         log.debug("LFCOpenContentWellController.update()");
         WxNodeResource wxNodeResource = loadResourceFromRequest(request);
     
-        LFCOpenContentWellDAO dao = new LFCOpenContentWellDAO();
-        dao.updateResource(wxNodeResource);
         HashMap<String, String> model = new HashMap<String, String>();
-        //TODO: wrap dao call in try/catch and return appropriate results, not success every time
-        model.put("json", "{\"msg\":\"Resource successfully updated in document store\"}");        
-        return new ModelAndView("getautocompletesearch", "model", model);
-    
+        JSONObject jsonObj = new JSONObject();
+        try {
+            LFCOpenContentWellDAO dao = new LFCOpenContentWellDAO();
+            if (resourceExists(dao, wxNodeResource)) {
+                dao.updateResource(wxNodeResource);
+                jsonObj.put(JSON_MSG_KEY, "Resource successfully updated in document store.");  
+            }
+            else {
+                jsonObj.put(JSON_ERROR_KEY, "No resource could be found for the given Resource Id and Platform in the document store.");
+            }
+        }
+        catch(Exception e) {
+            log.error("Error updating wxnode resource", e);
+            jsonObj.put(JSON_ERROR_KEY, "There was an unknown error updating the resource, please consult the server logs for details.");
+        }
+        model.put(MODEL_JSON_KEY, jsonObj.toString());            
+        return new ModelAndView(MODEL_AND_VIEW_NAME, MODEL_KEY, model);    
     }  
     
     public ModelAndView get(HttpServletRequest request, HttpServletResponse response)
@@ -84,16 +102,28 @@ public class LFCOpenContentWellController extends MultiActionController {
         log.debug("LFCOpenContentWellController.get()");
         log.debug("Resource: " + request.getParameter(RESOURCE_REQUEST_PARAM)); 
         WxNodeResource wxNodeResource = loadResourceFromRequest(request);
-        LFCOpenContentWellDAO dao = new LFCOpenContentWellDAO();
-        WxNodeResource fetchedResource = dao.getResourceByKey(wxNodeResource.getKey());
+        
         HashMap<String, String> model = new HashMap<String, String>();
-        if (fetchedResource != null) {
-            model.put("json", fetchedResource.toJSON());   
+        JSONObject jsonObj = new JSONObject();
+        try {
+            LFCOpenContentWellDAO dao = new LFCOpenContentWellDAO();
+            WxNodeResource fetchedResource = dao.getResourceByKey(wxNodeResource.getKey());
+            if (fetchedResource != null) {
+                //model.put(MODEL_JSON_KEY, fetchedResource.toJSON());
+                jsonObj = fetchedResource.getJSONObject();
+                jsonObj.put(JSON_MSG_KEY, "Successfully loaded resource from document store.");
+            }
+            else {
+                jsonObj.put(JSON_ERROR_KEY, "No resource could be found for the given Resource Id and Platform in the document store.");
+            }
         }
-        else {
-            model.put("json", "");
+        catch(Exception e) {
+            log.error("Error getting wxnode resource", e);            
+            jsonObj.put(JSON_ERROR_KEY, "There was an unknown error getting the resource, please consult the server logs for details.");
+            
         }
-        return new ModelAndView("getautocompletesearch", "model", model);
+        model.put(MODEL_JSON_KEY, jsonObj.toString());         
+        return new ModelAndView(MODEL_AND_VIEW_NAME, MODEL_KEY, model);
 
     }     
     
@@ -102,12 +132,26 @@ public class LFCOpenContentWellController extends MultiActionController {
         log.debug("LFCOpenContentWellController.delete()");
         log.debug("Resource: " + request.getParameter(RESOURCE_REQUEST_PARAM));        
         WxNodeResource wxNodeResource = loadResourceFromRequest(request);
-        LFCOpenContentWellDAO dao = new LFCOpenContentWellDAO();
-        dao.deleteResource(wxNodeResource.getKey());
+        
         HashMap<String, String> model = new HashMap<String, String>();
-        //TODO: Handle exceptions from dao and return appropriate msg
-        model.put("json", "{\"msg\":\"Resource successfully deleted from document store\"}");        
-        return new ModelAndView("getautocompletesearch", "model", model);
+        JSONObject jsonObj = new JSONObject();        
+        try {
+            LFCOpenContentWellDAO dao = new LFCOpenContentWellDAO();
+            if (resourceExists(dao, wxNodeResource)) {
+                dao.deleteResource(wxNodeResource.getKey());
+                jsonObj.put(JSON_MSG_KEY, "Resource successfully deleted from document store");                   
+            }
+            else {
+                jsonObj.put(JSON_ERROR_KEY, "No resource could be found for the given Resource Id and Platform in the document store.");
+            }
+        
+        }
+        catch(Exception e) {
+            log.error("Error deleting wxnode resource", e);
+            jsonObj.put(JSON_ERROR_KEY, "There was an unknown error deleting the resource, please consult the server logs for details.");
+        }
+        model.put(MODEL_JSON_KEY, jsonObj.toString());                            
+        return new ModelAndView(MODEL_AND_VIEW_NAME, MODEL_KEY, model);
 
     } 
     
@@ -132,10 +176,27 @@ public class LFCOpenContentWellController extends MultiActionController {
         return wxNodeResource;
     }
     
+    private boolean resourceExists(LFCOpenContentWellDAO dao, WxNodeResource resourceFromRequest) throws Exception {
+        WxNodeResource fetchedResource = dao.getResourceByKey(resourceFromRequest.getKey());
+        if (fetchedResource != null) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    
     private static final String TITLE_REQUEST_PARAM = "title";
     private static final String PLATFORM_REQUEST_PARAM = "platform";
     private static final String PROVIDER_CODE_REQUEST_PARAM = "providercode";
     private static final String RESOURCE_REQUEST_PARAM = "resource";
     private static final String AUTOCOMPLETE_TERM_PARAM = "term";
+    
+    private static final String JSON_MSG_KEY = "msg";
+    private static final String JSON_ERROR_KEY = "error";
+    private static final String MODEL_JSON_KEY = "json";
+    private static final String MODEL_KEY = "model";
+    //Note, this model and view name comes from taxonomy.  There is a view that just displays model.json, which is what we need.
+    private static final String MODEL_AND_VIEW_NAME = "getautocompletesearch";
 
 }

@@ -32,7 +32,7 @@ public class LFCOpenContentWellDAO {
 //        
 //    }
     
-    public void createResource(WxNodeResource wxNodeResource) {
+    public void createResource(WxNodeResource wxNodeResource) throws Exception {
         log.debug("Enter createResource()");
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -45,11 +45,8 @@ public class LFCOpenContentWellDAO {
             stmt.setString(1, wxNodeResource.getKey());            
             stmt.setString(2, wxNodeResource.getProviderCode());
             stmt.setString(3, CONTENT_TYPE_DEFAULT);
-            stmt.setDate(4, getCurrentSqlDate());
+            stmt.setTimestamp(4, getCurrentSqlTimestamp());
             stmt.executeUpdate();
-        }
-        catch(Exception e) {
-            log.error("Error creating wx node resource", e);
         }
         finally {
             cleanup(stmt, null, conn);
@@ -57,7 +54,7 @@ public class LFCOpenContentWellDAO {
         log.debug("Exit createResource()");     
     }
     
-    public void updateResource(WxNodeResource wxNodeResource) {
+    public void updateResource(WxNodeResource wxNodeResource) throws Exception {
         log.debug("Enter updateResource()");
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -68,12 +65,9 @@ public class LFCOpenContentWellDAO {
             conn = PSConnectionHelper.getDbConnection(connectionInfo);
             stmt = conn.prepareStatement("update cms_keystore set content=?, last_modified=? where cms_key = ?");
             stmt.setString(1, wxNodeResource.getProviderCode());
-            stmt.setDate(2, getCurrentSqlDate());
+            stmt.setTimestamp(2, getCurrentSqlTimestamp());
             stmt.setString(3, wxNodeResource.getKey());
             stmt.executeUpdate();
-        }
-        catch(Exception e) {
-            log.error("Error updating wx node resource", e);
         }
         finally {
             cleanup(stmt, null, conn);
@@ -81,7 +75,7 @@ public class LFCOpenContentWellDAO {
         log.debug("Exit updateResource()");        
     }    
     
-    public WxNodeResource getResourceByKey(String key) {
+    public WxNodeResource getResourceByKey(String key) throws Exception {
         log.debug("Enter getResourceByKey()");
         WxNodeResource wxNodeResource = null;
         Connection conn = null;
@@ -100,9 +94,6 @@ public class LFCOpenContentWellDAO {
                 break;
             }
         }
-        catch(Exception e) {
-            log.error("Error getting wx node resource", e);
-        }
         finally {
             cleanup(stmt, results, conn);
         }        
@@ -110,7 +101,7 @@ public class LFCOpenContentWellDAO {
         return wxNodeResource;
     }
     
-    public void deleteResource(String key) {
+    public void deleteResource(String key) throws Exception {
         log.debug("Enter deleteResource()");
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -122,9 +113,6 @@ public class LFCOpenContentWellDAO {
             stmt = conn.prepareStatement("delete from cms_keystore where cms_key = ?");
             stmt.setString(1, key);
             stmt.executeUpdate();
-        }
-        catch(Exception e) {
-            log.error("Error deleting wx node resource", e);
         }
         finally {
             cleanup(stmt, null, conn);
@@ -202,6 +190,11 @@ public class LFCOpenContentWellDAO {
     private java.sql.Date getCurrentSqlDate() {
         Calendar cal = Calendar.getInstance();
         return new java.sql.Date((cal.getTime()).getTime());
+    }
+    
+    private java.sql.Timestamp getCurrentSqlTimestamp() {
+        Calendar cal = Calendar.getInstance();
+        return new java.sql.Timestamp(cal.getTimeInMillis());
     }
 
 }
