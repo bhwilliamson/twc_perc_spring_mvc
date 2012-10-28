@@ -5,7 +5,9 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,15 +30,32 @@ public class LFCOpenContentWellDAO {
     
     private static final Log log = LogFactory.getLog(LFCOpenContentWellDAO.class);
     
-//    public List searchForResourceIds(String partialId) {
-//        
-//    }
-    
-    public void createResource(WxNodeResource wxNodeResource) throws Exception {
-        log.debug("Enter createResource()");
+    public List searchForResourceIds(WxNodeResource wxNodeResource) throws Exception {
+        List<String> matchingResourceIds = new ArrayList<String>();
         Connection conn = null;
         PreparedStatement stmt = null;
-        //TODO: Don't catch exception here, need to pass back up the chain for handling and display return to UI
+        ResultSet results = null;        
+        try {            
+            IPSConnectionInfo connectionInfo = new PSConnectionInfo(DATASOURCE_NAME);
+            conn = PSConnectionHelper.getDbConnection(connectionInfo);
+            stmt = conn.prepareStatement("select cms_key from cms_keystore where cms_key like ?");
+            stmt.setString(1, new StringBuilder(wxNodeResource.getKey()).append("%").toString());
+            results = stmt.executeQuery();
+            while (results.next()) {
+                WxNodeResource resource = new WxNodeResource();
+                resource.setKey(results.getString(CMS_KEY_FIELD));                                
+                matchingResourceIds.add(resource.getResourceId());
+            }
+        }
+        finally {
+            cleanup(stmt, results, conn);
+        }        
+        return matchingResourceIds;        
+    }
+    
+    public void createResource(WxNodeResource wxNodeResource) throws Exception {
+        Connection conn = null;
+        PreparedStatement stmt = null;
         try {
             
             IPSConnectionInfo connectionInfo = new PSConnectionInfo(DATASOURCE_NAME);
@@ -50,15 +69,12 @@ public class LFCOpenContentWellDAO {
         }
         finally {
             cleanup(stmt, null, conn);
-        }        
-        log.debug("Exit createResource()");     
+        }             
     }
     
     public void updateResource(WxNodeResource wxNodeResource) throws Exception {
-        log.debug("Enter updateResource()");
         Connection conn = null;
         PreparedStatement stmt = null;
-        //TODO: Don't catch exception here, need to pass back up the chain for handling and display return to UI
         try {
             
             IPSConnectionInfo connectionInfo = new PSConnectionInfo(DATASOURCE_NAME);
@@ -71,17 +87,14 @@ public class LFCOpenContentWellDAO {
         }
         finally {
             cleanup(stmt, null, conn);
-        }        
-        log.debug("Exit updateResource()");        
+        }               
     }    
     
     public WxNodeResource getResourceByKey(String key) throws Exception {
-        log.debug("Enter getResourceByKey()");
         WxNodeResource wxNodeResource = null;
         Connection conn = null;
         PreparedStatement stmt = null;
-        ResultSet results = null;
-        //TODO: Don't catch exception here, need to pass back up the chain for handling and display return to UI        
+        ResultSet results = null;        
         try {            
             IPSConnectionInfo connectionInfo = new PSConnectionInfo(DATASOURCE_NAME);
             conn = PSConnectionHelper.getDbConnection(connectionInfo);
@@ -89,7 +102,6 @@ public class LFCOpenContentWellDAO {
             stmt.setString(1, key);
             results = stmt.executeQuery();
             while (results.next()) {
-                log.debug("Found cms_key: " + results.getString("cms_key"));
                 wxNodeResource = getResourceFromResultSet(results);                
                 break;
             }
@@ -97,15 +109,12 @@ public class LFCOpenContentWellDAO {
         finally {
             cleanup(stmt, results, conn);
         }        
-        log.debug("Exit getResourceByKey()");
         return wxNodeResource;
     }
     
     public void deleteResource(String key) throws Exception {
-        log.debug("Enter deleteResource()");
         Connection conn = null;
         PreparedStatement stmt = null;
-        //TODO: Don't catch exception here, need to pass back up the chain for handling and display return to UI
         try {
             
             IPSConnectionInfo connectionInfo = new PSConnectionInfo(DATASOURCE_NAME);
@@ -116,34 +125,7 @@ public class LFCOpenContentWellDAO {
         }
         finally {
             cleanup(stmt, null, conn);
-        }        
-        log.debug("Exit deleteResource()");        
-    }
-    
-    
-    public void testDAO() { 
-        log.debug("========= Testing the DAO ============");
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        ResultSet results = null;
-        try {
-            
-            IPSConnectionInfo connectionInfo = new PSConnectionInfo(DATASOURCE_NAME);
-            conn = PSConnectionHelper.getDbConnection(connectionInfo);
-            stmt = conn.prepareStatement("select cms_key from cms_keystore where cms_key = ?");
-            stmt.setString(1, "/touchi/staging/static/googleTranslate.txt");
-            results = stmt.executeQuery();
-            while (results.next()) {
-                log.debug("Found cms_key: " + results.getString("cms_key"));
-            }
-        }
-        catch(Exception e) {
-            log.error("Error in DAO test", e);
-        }
-        finally {
-            cleanup(stmt, results, conn);
-        }
-        log.debug("========= Done Testing the DAO ============");        
+        }                
     }
     
     private void cleanup(PreparedStatement stmt, ResultSet results, Connection conn) {
@@ -175,15 +157,10 @@ public class LFCOpenContentWellDAO {
         }        
     }
     
-    private WxNodeResource getResourceFromResultSet(ResultSet result) {
+    private WxNodeResource getResourceFromResultSet(ResultSet result) throws Exception {
         WxNodeResource resource = new WxNodeResource();
-        try {
-            resource.setKey(result.getString(CMS_KEY_FIELD));
-            resource.setProviderCode(result.getString(CONTENT_FIELD));
-        }
-        catch(SQLException sqe) {
-            log.error("Error retrieving wxnode resource from resultset", sqe);
-        }
+        resource.setKey(result.getString(CMS_KEY_FIELD));
+        resource.setProviderCode(result.getString(CONTENT_FIELD));
         return resource;
     }   
     

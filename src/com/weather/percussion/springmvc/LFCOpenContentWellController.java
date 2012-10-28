@@ -1,12 +1,14 @@
 package com.weather.percussion.springmvc;
 
 import java.util.HashMap;
+import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.multiaction.MultiActionController;
@@ -27,28 +29,34 @@ public class LFCOpenContentWellController extends MultiActionController {
         return -1L;
     }
     
-    public ModelAndView resourceAutocomplete(HttpServletRequest request, HttpServletResponse response) {
-        String inputTerm = request.getParameter(AUTOCOMPLETE_TERM_PARAM);
-        log.debug("LFCOpenContentWellController.resourceAutocomplete() with term: " + inputTerm);
-        
-        //TODO: Query for resource starting with this resource id
-        
-        //TODO: Remove after db hooked up
-        StringBuilder dummyData = new StringBuilder("[{\"id\":\"foot\",\"label\":\"foot\",\"value\":\"foot\",\"title\":\"foot\"},");
-        dummyData.append("{\"id\":\"fool\",\"label\":\"fool\",\"value\":\"fool\",\"title\":\"fool\"},");
-        dummyData.append("{\"id\":\"football\",\"label\":\"football\",\"value\":\"football\",\"title\":\"football\"},");
-        dummyData.append("{\"id\":\"jets\",\"label\":\"jets\",\"value\":\"jets\",\"title\":\"jets\"},");
-        dummyData.append("{\"id\":\"texans\",\"label\":\"texans\",\"value\":\"texans\",\"title\":\"texans\"},");
-        dummyData.append("{\"id\":\"texas\",\"label\":\"texas\",\"value\":\"texas\",\"title\":\"texas\"}]");
-        
+    public ModelAndView resourceAutocomplete(HttpServletRequest request, HttpServletResponse response) {      
+        WxNodeResource wxNodeResource = loadResourceFromRequest(request);
         HashMap<String, String> model = new HashMap<String, String>();
-        model.put(MODEL_JSON_KEY, dummyData.toString());
-        return new ModelAndView("getautocompletesearch", MODEL_KEY, model);        
+        JSONArray jsonList  = new JSONArray();
+        try {
+            LFCOpenContentWellDAO dao = new LFCOpenContentWellDAO();
+            List<String> resourceIdList = dao.searchForResourceIds(wxNodeResource);
+            if (resourceIdList != null && resourceIdList.size() < 25) {
+                for (String resourceId : resourceIdList) {                   
+                    JSONObject jsonObj = new JSONObject();
+                    jsonObj.put("id", resourceId);
+                    jsonObj.put("label", resourceId);
+                    jsonObj.put("value", resourceId);
+                    jsonObj.put("title", resourceId);
+                    jsonList.add(jsonObj);
+                }
+            }
+        }
+        catch(Exception e) {
+            log.error("Error getting autocomplete results for wxnode resource id", e);
+        }
+                
+        model.put(MODEL_JSON_KEY, jsonList.toString());
+        return new ModelAndView(MODEL_AND_VIEW_NAME, MODEL_KEY, model);        
     }
     
     public ModelAndView create(HttpServletRequest request, HttpServletResponse response)
         throws Exception {
-        log.debug("LFCOpenContentWellController.create()");
         WxNodeResource wxNodeResource = loadResourceFromRequest(request);
                 
         HashMap<String, String> model = new HashMap<String, String>();
@@ -73,8 +81,7 @@ public class LFCOpenContentWellController extends MultiActionController {
     }
     
     public ModelAndView update(HttpServletRequest request, HttpServletResponse response)
-        throws Exception {        
-        log.debug("LFCOpenContentWellController.update()");
+        throws Exception {                
         WxNodeResource wxNodeResource = loadResourceFromRequest(request);
     
         HashMap<String, String> model = new HashMap<String, String>();
@@ -99,8 +106,6 @@ public class LFCOpenContentWellController extends MultiActionController {
     
     public ModelAndView get(HttpServletRequest request, HttpServletResponse response)
         throws Exception {
-        log.debug("LFCOpenContentWellController.get()");
-        log.debug("Resource: " + request.getParameter(RESOURCE_REQUEST_PARAM)); 
         WxNodeResource wxNodeResource = loadResourceFromRequest(request);
         
         HashMap<String, String> model = new HashMap<String, String>();
@@ -128,9 +133,7 @@ public class LFCOpenContentWellController extends MultiActionController {
     }     
     
     public ModelAndView delete(HttpServletRequest request, HttpServletResponse response)
-        throws Exception {
-        log.debug("LFCOpenContentWellController.delete()");
-        log.debug("Resource: " + request.getParameter(RESOURCE_REQUEST_PARAM));        
+        throws Exception {      
         WxNodeResource wxNodeResource = loadResourceFromRequest(request);
         
         HashMap<String, String> model = new HashMap<String, String>();
@@ -155,24 +158,12 @@ public class LFCOpenContentWellController extends MultiActionController {
 
     } 
     
-    private boolean isResourceIdUnique(String resourceId) {
-        boolean isUnique = true;
-        
-        //TODO: Query db for resource with this id
-        
-        return isUnique;
-    }
-    
     private WxNodeResource loadResourceFromRequest(HttpServletRequest request) {
         WxNodeResource wxNodeResource = new WxNodeResource();
         wxNodeResource.setResourceTitle(request.getParameter(TITLE_REQUEST_PARAM));
-        log.debug(new StringBuilder("Resource Title: ").append(wxNodeResource.getResourceTitle()).toString());
         wxNodeResource.setPlatform(request.getParameter(PLATFORM_REQUEST_PARAM));
-        log.debug(new StringBuilder("Platform: ").append(wxNodeResource.getPlatform()).toString());
         wxNodeResource.setProviderCode(request.getParameter(PROVIDER_CODE_REQUEST_PARAM));
-        log.debug(new StringBuilder("Provider Code: ").append(wxNodeResource.getProviderCode()).toString());
         wxNodeResource.setResourceId(request.getParameter(RESOURCE_REQUEST_PARAM));
-        log.debug(new StringBuilder("Resource Id: ").append(wxNodeResource.getResourceId()).toString());
         return wxNodeResource;
     }
     
