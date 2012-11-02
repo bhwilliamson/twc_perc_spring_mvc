@@ -19,7 +19,7 @@ import com.weather.percussion.data.WxNodeResource;
 
 public class LFCOpenContentWellDAO {
     
-    private static final String DATASOURCE_NAME = "shared_cosmos";
+    private static final String DATASOURCE_NAME = "RhythmyxData";
     private static final String CMS_KEYSTORE_TABLE = "cms_keystore";
     private static final String CMS_KEY_FIELD = "cms_key";
     private static final String CONTENT_FIELD = "content";
