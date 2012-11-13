@@ -17,6 +17,18 @@
             <bean class="org.springframework.web.servlet.mvc.multiaction.InternalPathMethodNameResolver">            	
             </bean>
         </property>
+        <property name="dao">
+        	<ref bean="LFCOpenContentWellDAO"/>
+        </property>
+    </bean>
+    
+    <bean name="LFCOpenContentWellDAO" class="com.weather.percussion.db.LFCOpenContentWellDAO">
+    	<property name="readConnection" value="shared_cosmos"/>
+    	<property name="writeConnection" value="RhythmyxData"/>
+    	<property name="statusValue" value="not processed"/>
+    	<property name="actionCreateValue" value="create"/>
+    	<property name="actionUpdateValue" value="update"/>
+    	<property name="actionDeleteValue" value="delete"/>
     </bean>	
 				
 </beans>

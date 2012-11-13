@@ -19,16 +19,19 @@ import com.weather.percussion.data.WxNodeResource;
 
 public class LFCOpenContentWellDAO {
     
-    private static final String DATASOURCE_NAME = "RhythmyxData";
-    private static final String CMS_KEYSTORE_TABLE = "cms_keystore";
+    //private static final String DATASOURCE_NAME = "RhythmyxData"; //Get from spring config
     private static final String CMS_KEY_FIELD = "cms_key";
     private static final String CONTENT_FIELD = "content";
-    private static final String CONTENT_TYPE_FIELD = "content_type";
-    private static final String LAST_MODIFIED_FIELD = "last_modified";
     
     private static final String CONTENT_TYPE_DEFAULT = "text/plain";
     
     private static final Log log = LogFactory.getLog(LFCOpenContentWellDAO.class);
+    private String readConnection = null;
+    private String writeConnection = null;
+    private String statusValue = null;
+    private String actionCreateValue = null;
+    private String actionUpdateValue = null;
+    private String actionDeleteValue = null;
     
     public List searchForResourceIds(WxNodeResource wxNodeResource) throws Exception {
         List<String> matchingResourceIds = new ArrayList<String>();
@@ -36,7 +39,7 @@ public class LFCOpenContentWellDAO {
         PreparedStatement stmt = null;
         ResultSet results = null;        
         try {            
-            IPSConnectionInfo connectionInfo = new PSConnectionInfo(DATASOURCE_NAME);
+            IPSConnectionInfo connectionInfo = new PSConnectionInfo(readConnection);
             conn = PSConnectionHelper.getDbConnection(connectionInfo);
             stmt = conn.prepareStatement("select cms_key from cms_keystore where cms_key like ?");
             stmt.setString(1, new StringBuilder(wxNodeResource.getKey()).append("%").toString());
@@ -54,40 +57,11 @@ public class LFCOpenContentWellDAO {
     }
     
     public void createResource(WxNodeResource wxNodeResource) throws Exception {
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        try {
-            
-            IPSConnectionInfo connectionInfo = new PSConnectionInfo(DATASOURCE_NAME);
-            conn = PSConnectionHelper.getDbConnection(connectionInfo);
-            stmt = conn.prepareStatement("insert into cms_keystore (cms_key, content, content_type, last_modified) values (?, ?, ?, ?)");
-            stmt.setString(1, wxNodeResource.getKey());            
-            stmt.setString(2, wxNodeResource.getProviderCode());
-            stmt.setString(3, CONTENT_TYPE_DEFAULT);
-            stmt.setTimestamp(4, getCurrentSqlTimestamp());
-            stmt.executeUpdate();
-        }
-        finally {
-            cleanup(stmt, null, conn);
-        }             
+        createTempResourceRecord(wxNodeResource, actionCreateValue);
     }
     
     public void updateResource(WxNodeResource wxNodeResource) throws Exception {
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        try {
-            
-            IPSConnectionInfo connectionInfo = new PSConnectionInfo(DATASOURCE_NAME);
-            conn = PSConnectionHelper.getDbConnection(connectionInfo);
-            stmt = conn.prepareStatement("update cms_keystore set content=?, last_modified=? where cms_key = ?");
-            stmt.setString(1, wxNodeResource.getProviderCode());
-            stmt.setTimestamp(2, getCurrentSqlTimestamp());
-            stmt.setString(3, wxNodeResource.getKey());
-            stmt.executeUpdate();
-        }
-        finally {
-            cleanup(stmt, null, conn);
-        }               
+        createTempResourceRecord(wxNodeResource, actionUpdateValue);
     }    
     
     public WxNodeResource getResourceByKey(String key) throws Exception {
@@ -96,7 +70,7 @@ public class LFCOpenContentWellDAO {
         PreparedStatement stmt = null;
         ResultSet results = null;        
         try {            
-            IPSConnectionInfo connectionInfo = new PSConnectionInfo(DATASOURCE_NAME);
+            IPSConnectionInfo connectionInfo = new PSConnectionInfo(readConnection);
             conn = PSConnectionHelper.getDbConnection(connectionInfo);
             stmt = conn.prepareStatement("select cms_key, content from cms_keystore where cms_key = ?");
             stmt.setString(1, key);
@@ -112,22 +86,79 @@ public class LFCOpenContentWellDAO {
         return wxNodeResource;
     }
     
-    public void deleteResource(String key) throws Exception {
+    public void deleteResource(WxNodeResource wxNodeResource) throws Exception {
+        createTempResourceRecord(wxNodeResource, actionDeleteValue);
+    }    
+    
+    public String getReadConnection() {
+        return readConnection;
+    }
+
+    public void setReadConnection(String readConnection) {
+        this.readConnection = readConnection;
+    }
+
+    public String getWriteConnection() {
+        return writeConnection;
+    }
+
+    public void setWriteConnection(String writeConnection) {
+        this.writeConnection = writeConnection;
+    }        
+
+    public String getStatusValue() {
+        return statusValue;
+    }
+
+    public void setStatusValue(String statusValue) {
+        this.statusValue = statusValue;
+    }
+
+    public String getActionCreateValue() {
+        return actionCreateValue;
+    }
+
+    public void setActionCreateValue(String actionCreateValue) {
+        this.actionCreateValue = actionCreateValue;
+    }
+
+    public String getActionUpdateValue() {
+        return actionUpdateValue;
+    }
+
+    public void setActionUpdateValue(String actionUpdateValue) {
+        this.actionUpdateValue = actionUpdateValue;
+    }
+
+    public String getActionDeleteValue() {
+        return actionDeleteValue;
+    }
+
+    public void setActionDeleteValue(String actionDeleteValue) {
+        this.actionDeleteValue = actionDeleteValue;
+    }
+    
+    private void createTempResourceRecord(WxNodeResource wxNodeResource, String action) throws Exception {
         Connection conn = null;
         PreparedStatement stmt = null;
         try {
             
-            IPSConnectionInfo connectionInfo = new PSConnectionInfo(DATASOURCE_NAME);
+            IPSConnectionInfo connectionInfo = new PSConnectionInfo(writeConnection);
             conn = PSConnectionHelper.getDbConnection(connectionInfo);
-            stmt = conn.prepareStatement("delete from cms_keystore where cms_key = ?");
-            stmt.setString(1, key);
+            stmt = conn.prepareStatement("insert into cms_keystore (cms_key, content, content_type, last_modified, status, action) values (?, ?, ?, ?, ?, ?)");
+            stmt.setString(1, wxNodeResource.getKey());            
+            stmt.setString(2, wxNodeResource.getProviderCode());
+            stmt.setString(3, CONTENT_TYPE_DEFAULT);
+            stmt.setTimestamp(4, getCurrentSqlTimestamp());
+            stmt.setString(5, statusValue);
+            stmt.setString(6, action);            
             stmt.executeUpdate();
         }
         finally {
             cleanup(stmt, null, conn);
-        }                
-    }
-    
+        }             
+    }    
+
     private void cleanup(PreparedStatement stmt, ResultSet results, Connection conn) {
         if (results != null) {
             try {

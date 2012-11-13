@@ -20,6 +20,8 @@ public class LFCOpenContentWellController extends MultiActionController {
     
     private static final Log log = LogFactory.getLog(LFCOpenContentWellController.class);
     
+    LFCOpenContentWellDAO dao;
+    
     /**
      * getLastModified was throwing exceptions from super, couldn't figure out 
      * why and it didn't cause any problems except filling up the logs since we aren't
@@ -34,7 +36,6 @@ public class LFCOpenContentWellController extends MultiActionController {
         HashMap<String, String> model = new HashMap<String, String>();
         JSONArray jsonList  = new JSONArray();
         try {
-            LFCOpenContentWellDAO dao = new LFCOpenContentWellDAO();
             List<String> resourceIdList = dao.searchForResourceIds(wxNodeResource);
             if (resourceIdList != null && resourceIdList.size() < 25) {
                 for (String resourceId : resourceIdList) {                   
@@ -62,7 +63,6 @@ public class LFCOpenContentWellController extends MultiActionController {
         HashMap<String, String> model = new HashMap<String, String>();
         JSONObject jsonObj = new JSONObject();                                    
         try {
-            LFCOpenContentWellDAO dao = new LFCOpenContentWellDAO();
             if (!resourceExists(dao, wxNodeResource)) {
                 dao.createResource(wxNodeResource);                
                 jsonObj.put(JSON_MSG_KEY, "Resource successfully created in document store.");  
@@ -87,7 +87,6 @@ public class LFCOpenContentWellController extends MultiActionController {
         HashMap<String, String> model = new HashMap<String, String>();
         JSONObject jsonObj = new JSONObject();
         try {
-            LFCOpenContentWellDAO dao = new LFCOpenContentWellDAO();
             if (resourceExists(dao, wxNodeResource)) {
                 dao.updateResource(wxNodeResource);
                 jsonObj.put(JSON_MSG_KEY, "Resource successfully updated in document store.");  
@@ -111,7 +110,6 @@ public class LFCOpenContentWellController extends MultiActionController {
         HashMap<String, String> model = new HashMap<String, String>();
         JSONObject jsonObj = new JSONObject();
         try {
-            LFCOpenContentWellDAO dao = new LFCOpenContentWellDAO();
             WxNodeResource fetchedResource = dao.getResourceByKey(wxNodeResource.getKey());
             if (fetchedResource != null) {
                 //model.put(MODEL_JSON_KEY, fetchedResource.toJSON());
@@ -139,9 +137,8 @@ public class LFCOpenContentWellController extends MultiActionController {
         HashMap<String, String> model = new HashMap<String, String>();
         JSONObject jsonObj = new JSONObject();        
         try {
-            LFCOpenContentWellDAO dao = new LFCOpenContentWellDAO();
             if (resourceExists(dao, wxNodeResource)) {
-                dao.deleteResource(wxNodeResource.getKey());
+                dao.deleteResource(wxNodeResource);
                 jsonObj.put(JSON_MSG_KEY, "Resource successfully deleted from document store");                   
             }
             else {
@@ -156,8 +153,16 @@ public class LFCOpenContentWellController extends MultiActionController {
         model.put(MODEL_JSON_KEY, jsonObj.toString());                            
         return new ModelAndView(MODEL_AND_VIEW_NAME, MODEL_KEY, model);
 
-    } 
+    }    
     
+    public LFCOpenContentWellDAO getDao() {
+        return dao;
+    }
+
+    public void setDao(LFCOpenContentWellDAO dao) {
+        this.dao = dao;
+    }
+
     private WxNodeResource loadResourceFromRequest(HttpServletRequest request) {
         WxNodeResource wxNodeResource = new WxNodeResource();
         wxNodeResource.setResourceTitle(request.getParameter(TITLE_REQUEST_PARAM));
